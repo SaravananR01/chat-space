@@ -6,6 +6,8 @@ import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import Sentiment from 'sentiment';
 
+dotenv.config();
+
 const dev = process.env.NODE_ENV !== 'production';
 const PORT = process.env.PORT || 3000;
 
@@ -19,6 +21,7 @@ const pusher = new Pusher({
     cluster:process.env.PUSHER_APP_CLUSTER,
     useTLS:true
 });
+
 
 app.prepare()
 .then(()=>{
@@ -34,14 +37,29 @@ app.prepare()
     const chatHistory = { messages: [] };
     
     server.post('/message', (req, res, next) => {
-      const { user = null, message = '', timestamp = +new Date } = req.body;
-      const sentimentScore = sentiment.analyze(message).score;
-      
-      const chat = { user, message, timestamp, sentiment: sentimentScore };
-      
-      chatHistory.messages.push(chat);
-      pusher.trigger('chat-room', 'new-message', { chat });
-    });
+        try {
+          const { user, message, timestamp = +new Date } = req.body;
+          if (!user || !message) {
+            res.status(400).json({ error: 'User and message are required' });
+            return;
+          }
+          const sentimentScore = sentiment.analyze(message).score;
+     
+          const chat = { user, message, timestamp, sentiment: sentimentScore };
+          chatHistory.messages.push(chat);
+          pusher.trigger('chat-room', 'new-message', { chat })
+            .then(() => {
+              res.status(200).json({ status: 'success' });
+            })
+            .catch(err => {
+              console.error('Pusher error:', err);
+              res.status(500).json({ error: 'Failed to trigger Pusher event' });
+            });
+        } catch (error) {
+          console.error('Error processing message:', error);
+          res.status(500).json({ error: 'Internal Server Error' });
+        }
+      });
     
     server.post('/messages', (req, res, next) => {
       res.json({ ...chatHistory, status: 'success' });

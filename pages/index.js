@@ -29,9 +29,7 @@ class IndexPage extends Component {
       
       return (
         <Layout pageTitle="Realtime Chat">
-        
           <main className="container-fluid position-absolute h-100 bg-dark">
-          
             <div className="row position-absolute w-100 h-100">
             
               <section className="col-md-8 d-flex flex-row flex-wrap align-items-center align-content-center px-5">
